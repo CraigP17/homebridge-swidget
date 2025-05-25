@@ -1,19 +1,19 @@
 {
-  "name": "homebridge-plugin-name",
-  "displayName": "Plugin Name",
+  "name": "homebridge-swidget",
+  "displayName": "Swidget",
   "type": "module",
   "version": "1.0.0",
   "private": true,
-  "description": "A short description about what your plugin does.",
-  "author": "Your Name",
+  "description": "HomeBridge plugin to control Swidget devices",
+  "author": "Craig Pinto",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/USERNAME/GITHUB_PROJECT_NAME#readme",
+  "homepage": "https://github.com/CraigP17/homebridge-swidget#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME.git"
+    "url": "https://github.com/CraigP17/homebridge-swidget.git"
   },
   "bugs": {
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+    "url": "https://github.com/CraigP17/homebridge-swidget/issues"
   },
   "keywords": [
     "homebridge-plugin"
@@ -36,7 +36,7 @@
     "@eslint/js": "^9.21.0",
     "@types/node": "^22.13.5",
     "eslint": "^9.21.0",
-    "homebridge": "^2.0.0-beta.0",
+    "homebridge": "^1.10.0 || ^2.0.0-beta.0",
     "nodemon": "^3.1.9",
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
