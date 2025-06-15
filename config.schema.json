@@ -3,14 +3,16 @@
   "pluginType": "platform",
   "singular": true,
   "strictValidation": false,
+  "headerDisplay": "<p><strong>To get started you will need to generate an Authorization Token from <a href='https://oauth.swidget.com/authorization/v2' target='_blank'>https://oauth.swidget.com/authorization/v2</a> by logging in with your Swidget account.</strong></p>",
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Name",
+      "bearerToken": {
         "type": "string",
+        "title": "Swidget Authorization Token",
         "required": true,
-        "default": "Example Dynamic Platform"
+        "description": "Required to connect with Swidget devices.",
+        "default": "Bearer eyJhb..."
       }
     }
   }

@@ -3,6 +3,8 @@ import type { API, Characteristic, DynamicPlatformPlugin, Logging, PlatformAcces
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { SwidgetPlatformAccessory } from './platformAccessory.js';
 
+import axios from 'axios';
+
 // This is only required when using Custom Services and Characteristics not support by HomeKit
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
 
@@ -37,6 +39,12 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
     this.CustomServices = new EveHomeKitTypes(this.api).Services;
     this.CustomCharacteristics = new EveHomeKitTypes(this.api).Characteristics;
 
+    if (!config.bearerToken) {
+      this.log.error(`Missing Swidget Bearer Token. 
+        Token must be provided in the config from <a href="https://oauth.swidget.com/authorization/v2" target="_blank">Swidget Authorization</a>.`);
+      return;
+    }
+
     this.log.debug('Finished initializing platform:', this.config.name);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
@@ -48,6 +56,7 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
       // run the method to discover / register your devices as accessories
       this.discoverDevices();
     });
+    
   }
 
   /**
@@ -86,6 +95,23 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
         CustomService: 'AirPressureSensor',
       },
     ];
+
+    const axiosConfig = {
+      method: 'get',
+      maxBodyLength: Infinity,
+      url: 'https://api.swidget.com/api/v1/sites',
+      headers: { 
+        'Authorization': this.config.bearerToken,
+      },
+    };
+      
+    axios(axiosConfig)
+      .then((response) => {
+        console.log(JSON.stringify(response.data));
+      })
+      .catch((error) => {
+        console.log(error);
+      });
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of exampleDevices) {
