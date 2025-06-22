@@ -2,8 +2,7 @@ import type { API, Characteristic, DynamicPlatformPlugin, Logging, PlatformAcces
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { SwidgetPlatformAccessory } from './platformAccessory.js';
-
-import axios from 'axios';
+import { SwidgetApiClient } from './api.js';
 
 // This is only required when using Custom Services and Characteristics not support by HomeKit
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
@@ -27,6 +26,8 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public readonly CustomCharacteristics: any;
 
+  private swidgetApi?: SwidgetApiClient;
+
   constructor(
     public readonly log: Logging,
     public readonly config: PlatformConfig,
@@ -44,6 +45,7 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
         Token must be provided in the config from <a href="https://oauth.swidget.com/authorization/v2" target="_blank">Swidget Authorization</a>.`);
       return;
     }
+    this.swidgetApi = new SwidgetApiClient(this);
 
     this.log.debug('Finished initializing platform:', this.config.name);
 
@@ -96,21 +98,16 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
       },
     ];
 
-    const axiosConfig = {
-      method: 'get',
-      maxBodyLength: Infinity,
-      url: 'https://api.swidget.com/api/v1/sites',
-      headers: { 
-        'Authorization': this.config.bearerToken,
-      },
-    };
-      
-    axios(axiosConfig)
-      .then((response) => {
-        console.log(JSON.stringify(response.data));
+    if (!this.swidgetApi) {
+      this.log.error('Swidget API client is not initialized — cannot perform API calls.');
+      return;
+    }
+    this.swidgetApi.getDevices()
+      .then(response => {
+        this.log.info(response);
       })
-      .catch((error) => {
-        console.log(error);
+      .catch(error => {
+        this.log.error('Error fetching devices:', error);
       });
 
     // loop over the discovered devices and register each one if it has not already been registered
