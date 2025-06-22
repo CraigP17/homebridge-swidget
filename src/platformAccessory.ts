@@ -92,8 +92,8 @@ export class SwidgetPlatformAccessory {
       motionSensorOneService.updateCharacteristic(this.platform.Characteristic.MotionDetected, motionDetected);
       motionSensorTwoService.updateCharacteristic(this.platform.Characteristic.MotionDetected, !motionDetected);
 
-      this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
-      this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
+      // this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
+      // this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
     }, 10000);
   }
 

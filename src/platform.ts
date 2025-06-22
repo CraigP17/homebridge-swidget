@@ -3,6 +3,7 @@ import type { API, Characteristic, DynamicPlatformPlugin, Logging, PlatformAcces
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { SwidgetPlatformAccessory } from './platformAccessory.js';
 import { SwidgetApiClient } from './api.js';
+import { SwidgetComponent } from './types.js';
 
 // This is only required when using Custom Services and Characteristics not support by HomeKit
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
@@ -77,7 +78,7 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
    * Accessories must only be registered once, previously created accessories
    * must not be registered again to prevent "duplicate UUID" errors.
    */
-  discoverDevices() {
+  async discoverDevices() {
     // EXAMPLE ONLY
     // A real plugin you would discover accessories from the local network, cloud services
     // or a user-defined array in the platform config.
@@ -98,17 +99,22 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
       },
     ];
 
-    if (!this.swidgetApi) {
-      this.log.error('Swidget API client is not initialized — cannot perform API calls.');
-      return;
-    }
-    this.swidgetApi.getDevices()
-      .then(response => {
-        this.log.info(response);
-      })
-      .catch(error => {
-        this.log.error('Error fetching devices:', error);
-      });
+    try {
+      const swidgetComponents: SwidgetComponent[] = await this.swidgetApi?.getComponents() ?? [];
+      for (const component of swidgetComponents) {
+        this.log.debug('=============');
+        this.log.debug(component.name);
+        this.log.debug(component.displayName);
+        this.log.debug(component.hostId);
+        this.log.debug(component.hostType);
+        this.log.debug(component.functions.toString());
+        this.log.debug(component.isConnected.toString());
+        // const id = `${component.deviceId}${device.hostId}`;
+        // const uuid = this.api.hap.uuid.generate(id);
+      }
+    } catch (error) {
+      this.log.error('Error Retrieving Devices');
+    }    
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of exampleDevices) {
