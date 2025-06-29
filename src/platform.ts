@@ -3,7 +3,7 @@ import type { API, Characteristic, DynamicPlatformPlugin, Logging, PlatformAcces
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { SwidgetPlatformAccessory } from './platformAccessory.js';
 import { SwidgetApiClient } from './api.js';
-import { SwidgetComponent } from './types.js';
+import { SwidgetComponent, SwidgetDevice } from './types.js';
 
 // This is only required when using Custom Services and Characteristics not support by HomeKit
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
@@ -100,17 +100,43 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
     ];
 
     try {
-      const swidgetComponents: SwidgetComponent[] = await this.swidgetApi?.getComponents() ?? [];
-      for (const component of swidgetComponents) {
+      const swidgetDevicess: SwidgetDevice[] = await this.swidgetApi?.getDevices() ?? [];
+      for (const device of swidgetDevicess) {
         this.log.debug('=============');
-        this.log.debug(component.name);
-        this.log.debug(component.displayName);
-        this.log.debug(component.hostId);
-        this.log.debug(component.hostType);
-        this.log.debug(component.functions.toString());
-        this.log.debug(component.isConnected.toString());
-        // const id = `${component.deviceId}${device.hostId}`;
-        // const uuid = this.api.hap.uuid.generate(id);
+        this.log.debug(device.name);
+        this.log.debug(device.displayName);
+        this.log.debug(device.hostId);
+        this.log.debug(device.hostType);
+        this.log.debug(device.components.toString());
+        this.log.debug(device.isConnected.toString());
+
+        const id = `${device.hostId}${device.siteId}`;
+        const uuid = this.api.hap.uuid.generate(id);
+
+        const existingAccessory = this.accessories.get(uuid);
+        if (existingAccessory) {
+          // the accessory already exists
+          this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
+          new SwidgetPlatformAccessory(this, existingAccessory);
+        } else {
+          // the accessory does not yet exist, so we need to create it
+          this.log.info('Adding new accessory:', device.displayName);
+    
+          // create a new accessory
+          const accessory = new this.api.platformAccessory(device.displayName, uuid);
+    
+          // store a copy of the device object in the `accessory.context`
+          // the `context` property can be used to store any data about the accessory you may need
+          accessory.context.device = device;
+    
+          // create the accessory handler for the newly create accessory
+          // this is imported from `platformAccessory.ts`
+          new SwidgetPlatformAccessory(this, accessory);
+    
+          // link the accessory to your platform
+          this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        }
+        this.discoveredCacheUUIDs.push(uuid);
       }
     } catch (error) {
       this.log.error('Error Retrieving Devices');

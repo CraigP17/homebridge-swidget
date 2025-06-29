@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Logging } from 'homebridge';
 import type { SwidgetHomebridgePlatform } from './platform.js';
-import type { SwidgetComponent } from './types.js';
+import type { SwidgetComponent, SwidgetDevice } from './types.js';
 
 
 interface SitesResponse {
@@ -31,7 +31,7 @@ export class SwidgetApiClient {
     this.bearerToken = platform.config.bearerToken;
   }
   
-  async getComponents(): Promise<SwidgetComponent[]> {
+  async getDevices(): Promise<SwidgetDevice[]> {
     try {
       if (!this.bearerToken) {
         throw new Error('No Bearer Token found. Please update plugin config');
@@ -53,25 +53,43 @@ export class SwidgetApiClient {
         this.log.warn('No devices returned from API');
         return [];
       }
-
       return response.data.flatMap((site: SitesResponse) =>
-        site.devices.flatMap(device =>
-          device.components
-            .filter(component => component.functions)
-            .map(component => ({
-              id: component.id,
-              name: component.name ?? component.id,
-              displayName: `${component.name ?? component.id} (${device.room})`,
-              functions: component.functions,
-              siteId: site.siteId,
-              deviceId: device.deviceId,
-              hostId: device.hostId,
-              hostType: device.hostType,
-              isConnected: device.isConnected,
-              room: device.room,
-            })),
-        ),
+        site.devices.map(device => ({
+          siteId: site.siteId,
+          hostId: device.hostId,
+          hostType: device.hostType,
+          isConnected: device.isConnected,
+          room: device.room,
+          deviceId: device.deviceId,
+          components: device.components.map(component => ({
+            id: component.id,
+            name: component.name ?? component.id,
+            displayName: `${component.name ?? component.id} (${device.room})`,
+            functions: component.functions,
+          })),
+          name: device.room ?? device.deviceId,
+          displayName: device.room ?? device.deviceId,
+        })),
       );
+
+    //   return response.data.flatMap((site: SitesResponse) =>
+    //     site.devices.flatMap(device =>
+    //       device.components
+    //         .filter(component => component.functions)
+    //         .map(component => ({
+    //           id: component.id,
+    //           name: component.name ?? component.id,
+    //           displayName: `${component.name ?? component.id} (${device.room})`,
+    //           functions: component.functions,
+    //           siteId: site.siteId,
+    //           deviceId: device.deviceId,
+    //           hostId: device.hostId,
+    //           hostType: device.hostType,
+    //           isConnected: device.isConnected,
+    //           room: device.room,
+    //         })),
+    //     ),
+    //   );
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.log.error(`Error: ${error.message}`);
