@@ -16,8 +16,6 @@ export class SwidgetPlatformAccessory {
     private readonly accessory: PlatformAccessory,
   ) {
     // set accessory information
-    this.platform.log.info('HostType ', accessory.context.device.hostType);
-    this.platform.log.info('Serial ', accessory.context.device.hostId);
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Swidget')
       .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.hostType)
@@ -28,7 +26,7 @@ export class SwidgetPlatformAccessory {
     for (const component of this.accessory.context.device.components) {
       this.platform.log.info('Name: ', component.name);
       this.platform.log.info('Functions: ', component.functions);
-      this.platform.log.info('Type: ', component.deviceType);
+      this.platform.log.info('Type: ', component.hostType);
       for (const func of component.functions) {
         switch (func) {
         case 'toggle':

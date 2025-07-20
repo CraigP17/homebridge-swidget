@@ -57,7 +57,8 @@ export class SwidgetApiClient {
         site.devices.map(device => ({
           siteId: site.siteId,
           hostId: device.hostId,
-          hostType: device.hostType === 'host.outlet' ? SwidgetDeviceType.Outlet : SwidgetDeviceType.Switch,
+          hostType: device.hostType,
+          deviceType: device.hostType === 'host.outlet' ? SwidgetDeviceType.Outlet : SwidgetDeviceType.Switch,
           isConnected: device.isConnected,
           room: device.room,
           deviceId: device.deviceId,
