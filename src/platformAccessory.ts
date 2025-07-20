@@ -16,6 +16,8 @@ export class SwidgetPlatformAccessory {
     private readonly accessory: PlatformAccessory,
   ) {
     // set accessory information
+    this.platform.log.info('HostType ', accessory.context.device.hostType);
+    this.platform.log.info('Serial ', accessory.context.device.hostId);
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Swidget')
       .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.hostType)
@@ -24,18 +26,19 @@ export class SwidgetPlatformAccessory {
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
     for (const component of this.accessory.context.device.components) {
-      this.platform.log.info(component.functions);
+      this.platform.log.info('Name: ', component.name);
+      this.platform.log.info('Functions: ', component.functions);
+      this.platform.log.info('Type: ', component.deviceType);
       for (const func of component.functions) {
         switch (func) {
         case 'toggle':
           if (this.accessory.context.device.deviceType === SwidgetDeviceType.Outlet) {
             const outlet = this.accessory.getService(this.platform.Service.Outlet) || this.accessory.addService(this.platform.Service.Outlet);
-            outlet.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.exampleDisplayName);
+            outlet.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
           } else if (this.accessory.context.device.deviceType === SwidgetDeviceType.Switch) {
             const light = this.accessory.getService(this.platform.Service.Lightbulb) || 
                 this.accessory.addService(this.platform.Service.Lightbulb);
-
-            light.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.device);
+            light.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
 
             // Register handlers for the On/Off Characteristic
             light.getCharacteristic(this.platform.Characteristic.On)
