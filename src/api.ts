@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Logging } from 'homebridge';
 import type { SwidgetHomebridgePlatform } from './platform.js';
-import type { SwidgetComponent, SwidgetDevice } from './types.js';
+import { SwidgetDeviceType, SwidgetDevice } from './types.js';
 
 
 interface SitesResponse {
@@ -57,7 +57,7 @@ export class SwidgetApiClient {
         site.devices.map(device => ({
           siteId: site.siteId,
           hostId: device.hostId,
-          hostType: device.hostType,
+          hostType: device.hostType === 'host.outlet' ? SwidgetDeviceType.Outlet : SwidgetDeviceType.Switch,
           isConnected: device.isConnected,
           room: device.room,
           deviceId: device.deviceId,
@@ -67,8 +67,7 @@ export class SwidgetApiClient {
             displayName: `${component.name ?? component.id} (${device.room})`,
             functions: component.functions,
           })),
-          name: device.room ?? device.deviceId,
-          displayName: device.room ?? device.deviceId,
+          name: `${device.room} ${device.hostType === 'host.outlet' ? 'Outlet' : 'Switch'}`,
         })),
       );
 

@@ -1,6 +1,7 @@
 import type { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 
 import type { SwidgetHomebridgePlatform } from './platform.js';
+import { SwidgetDeviceType } from './types.js';
 
 /**
  * Platform Accessory
@@ -10,27 +11,54 @@ import type { SwidgetHomebridgePlatform } from './platform.js';
 export class SwidgetPlatformAccessory {
   private service: Service;
 
-  /**
-   * These are just used to create a working example
-   * You should implement your own code to track the state of your accessory
-   */
-  private exampleStates = {
-    On: false,
-    Brightness: 100,
-  };
-
   constructor(
     private readonly platform: SwidgetHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
   ) {
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Default-Manufacturer')
-      .setCharacteristic(this.platform.Characteristic.Model, 'Default-Model')
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Default-Serial');
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Swidget')
+      .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.hostType)
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.hostId);
 
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
+    for (const component of this.accessory.context.device.components) {
+      console.log(component.functions);
+      for (const func of component.functions) {
+        switch (func) {
+        case 'toggle':
+          if (this.accessory.context.device.deviceType === SwidgetDeviceType.Outlet) {
+            const outlet = this.accessory.getService(this.platform.Service.Outlet) || this.accessory.addService(this.platform.Service.Outlet);
+            outlet.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.exampleDisplayName);
+          } else if (this.accessory.context.device.deviceType === SwidgetDeviceType.Switch) {
+            const light = this.accessory.getService(this.platform.Service.Lightbulb) || 
+                this.accessory.addService(this.platform.Service.Lightbulb);
+
+            light.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.device);
+
+            // Register handlers for the On/Off Characteristic
+            light.getCharacteristic(this.platform.Characteristic.On)
+              .onSet(this.setOn.bind(this))
+              .onGet(this.getOn.bind(this));
+
+            if ('level' in component.functions) {
+              // Handle level with the toggle with the assumption that toggle always included for dimmer lights
+              // Register handlers for the Brightness Characteristic
+              light.getCharacteristic(this.platform.Characteristic.Brightness)
+                .onSet(this.setBrightness.bind(this));
+
+            }
+          }
+          break;
+        
+        default:
+          // Unsupported function, skip creating Characteristic
+          break;
+        }
+      }
+      
+    }
 
     if (accessory.context.device.CustomService) {
       // This is only required when using Custom Services and Characteristics not support by HomeKit
@@ -47,15 +75,7 @@ export class SwidgetPlatformAccessory {
     // each service must implement at-minimum the "required characteristics" for the given service type
     // see https://developers.homebridge.io/#/service/Lightbulb
 
-    // register handlers for the On/Off Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setOn.bind(this)) // SET - bind to the `setOn` method below
-      .onGet(this.getOn.bind(this)); // GET - bind to the `getOn` method below
-
-    // register handlers for the Brightness Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-      .onSet(this.setBrightness.bind(this)); // SET - bind to the `setBrightness` method below
-
+    
     /**
      * Creating multiple services of the same type.
      *
@@ -68,11 +88,11 @@ export class SwidgetPlatformAccessory {
      */
 
     // Example: add two "motion sensor" services to the accessory
-    const motionSensorOneService = this.accessory.getService('Motion Sensor One Name')
-      || this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor One Name', 'YourUniqueIdentifier-1');
+    // const motionSensorOneService = this.accessory.getService('Motion Sensor One Name')
+    //   || this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor One Name', 'YourUniqueIdentifier-1');
 
-    const motionSensorTwoService = this.accessory.getService('Motion Sensor Two Name')
-      || this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor Two Name', 'YourUniqueIdentifier-2');
+    // const motionSensorTwoService = this.accessory.getService('Motion Sensor Two Name')
+    //   || this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor Two Name', 'YourUniqueIdentifier-2');
 
     /**
      * Updating characteristics values asynchronously.
@@ -83,18 +103,18 @@ export class SwidgetPlatformAccessory {
      * the `updateCharacteristic` method.
      *
      */
-    let motionDetected = false;
-    setInterval(() => {
-      // EXAMPLE - inverse the trigger
-      motionDetected = !motionDetected;
+    // let motionDetected = false;
+    // setInterval(() => {
+    //   // EXAMPLE - inverse the trigger
+    //   motionDetected = !motionDetected;
 
-      // push the new value to HomeKit
-      motionSensorOneService.updateCharacteristic(this.platform.Characteristic.MotionDetected, motionDetected);
-      motionSensorTwoService.updateCharacteristic(this.platform.Characteristic.MotionDetected, !motionDetected);
+    //   // push the new value to HomeKit
+    //   motionSensorOneService.updateCharacteristic(this.platform.Characteristic.MotionDetected, motionDetected);
+    //   motionSensorTwoService.updateCharacteristic(this.platform.Characteristic.MotionDetected, !motionDetected);
 
-      // this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
-      // this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
-    }, 10000);
+    //   // this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
+    //   // this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
+    // }, 10000);
   }
 
   /**
@@ -102,8 +122,9 @@ export class SwidgetPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async setOn(value: CharacteristicValue) {
-    // implement your own code to turn your device on/off
-    this.exampleStates.On = value as boolean;
+    if (this.platform.swidgetApi) {
+      this.platform.log.debug('TODO: API setOn', value);
+    }
 
     this.platform.log.debug('Set Characteristic On ->', value);
   }
@@ -124,15 +145,15 @@ export class SwidgetPlatformAccessory {
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
   async getOn(): Promise<CharacteristicValue> {
-    // implement your own code to check if the device is on
-    const isOn = this.exampleStates.On;
 
-    this.platform.log.debug('Get Characteristic On ->', isOn);
+    if (this.platform.swidgetApi) {
+      this.platform.log.debug('TODO: API getOn');
+    }
 
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
 
-    return isOn;
+    return false;
   }
 
   /**
@@ -140,8 +161,10 @@ export class SwidgetPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, changing the Brightness
    */
   async setBrightness(value: CharacteristicValue) {
-    // implement your own code to set the brightness
-    this.exampleStates.Brightness = value as number;
+
+    if (this.platform.swidgetApi) {
+      this.platform.log.debug('TODO: API setBrightness', value);
+    }
 
     this.platform.log.debug('Set Characteristic Brightness -> ', value);
   }
