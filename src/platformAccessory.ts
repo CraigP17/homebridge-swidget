@@ -9,7 +9,6 @@ import { SwidgetDeviceType } from './types.js';
  * Each accessory may expose multiple services of different service types.
  */
 export class SwidgetPlatformAccessory {
-  private service: Service;
 
   constructor(
     private readonly platform: SwidgetHomebridgePlatform,
