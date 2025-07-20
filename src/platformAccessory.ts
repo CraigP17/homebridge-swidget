@@ -9,6 +9,7 @@ import { SwidgetDeviceType } from './types.js';
  * Each accessory may expose multiple services of different service types.
  */
 export class SwidgetPlatformAccessory {
+  private service: Service;
 
   constructor(
     private readonly platform: SwidgetHomebridgePlatform,
@@ -20,24 +21,25 @@ export class SwidgetPlatformAccessory {
       .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.hostType)
       .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.hostId);
 
-    // get the LightBulb service if it exists, otherwise create a new LightBulb service
-    // you can create multiple services for each accessory
     for (const component of this.accessory.context.device.components) {
       this.platform.log.info('ID: ', component.id);
       this.platform.log.info('Name: ', component.displayName);
       this.platform.log.info('Functions: ', component.functions);
-      this.platform.log.info('Type: ', this.accessory.context.device.deviceType);  
+      this.platform.log.info('Type: ', this.accessory.context.device.deviceType); 
+      
+      const uniqueId = `${component.id} ${component.displayName}`;
+      
       for (const func of component.functions) {
         switch (func) {
         case 'toggle':
           this.platform.log.info('Device Type IF: ', this.accessory.context.device.deviceType);
           if (this.accessory.context.device.deviceType === SwidgetDeviceType.Outlet) {
-            const outlet = this.accessory.getService(this.platform.Service.Outlet) || this.accessory.addService(this.platform.Service.Outlet);
-            this.platform.log.info('Setting Name: ', component.displayName);
+            const outlet = this.accessory.getService(uniqueId) || 
+              this.accessory.addService(this.platform.Service.Outlet, component.displayName, uniqueId);
             outlet.setCharacteristic(this.platform.Characteristic.Name, component.displayName);
           } else if (this.accessory.context.device.deviceType === SwidgetDeviceType.Switch) {
-            const light = this.accessory.getService(this.platform.Service.Lightbulb) || 
-                this.accessory.addService(this.platform.Service.Lightbulb);
+            const light = this.accessory.getService(uniqueId) || 
+              this.accessory.addService(this.platform.Service.Lightbulb, component.displayName, uniqueId);
             light.setCharacteristic(this.platform.Characteristic.Name, component.displayName);
 
             // Register handlers for the On/Off Characteristic
@@ -63,6 +65,16 @@ export class SwidgetPlatformAccessory {
       }
       
     }
+
+    if (accessory.context.device.CustomService) {
+      // This is only required when using Custom Services and Characteristics not support by HomeKit
+      this.service = this.accessory.getService(this.platform.CustomServices[accessory.context.device.CustomService]) ||
+        this.accessory.addService(this.platform.CustomServices[accessory.context.device.CustomService]);
+    } else {
+      this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
+    }
+
+
     
     /**
      * Creating multiple services of the same type.
