@@ -89,7 +89,6 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
         this.log.debug(device.hostId);
         this.log.debug(device.hostType);
         this.log.debug(device.components.toString());
-        this.log.debug(device.isConnected.toString());
 
         const id = `${device.hostId}${device.siteId}`;
         const uuid = this.api.hap.uuid.generate(id);

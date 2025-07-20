@@ -24,7 +24,7 @@ export class SwidgetPlatformAccessory {
     // get the LightBulb service if it exists, otherwise create a new LightBulb service
     // you can create multiple services for each accessory
     for (const component of this.accessory.context.device.components) {
-      console.log(component.functions);
+      this.platform.log.info(component.functions);
       for (const func of component.functions) {
         switch (func) {
         case 'toggle':
