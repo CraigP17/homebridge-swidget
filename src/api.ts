@@ -66,7 +66,7 @@ export class SwidgetApiClient {
             id: component.id,
             name: component.name ?? component.id,
             displayName: `${component.name ?? component.id} (${device.room})`,
-            functions: component.functions,
+            functions: component.functions ?? [],
           })),
           name: `${device.room} ${device.hostType === 'host.outlet' ? 'Outlet' : 'Switch'}`,
         })),
