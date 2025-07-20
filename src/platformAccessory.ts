@@ -31,8 +31,10 @@ export class SwidgetPlatformAccessory {
       for (const func of component.functions) {
         switch (func) {
         case 'toggle':
+          this.platform.log.info('Device Type IF: ', this.accessory.context.device.deviceType);
           if (this.accessory.context.device.deviceType === SwidgetDeviceType.Outlet) {
             const outlet = this.accessory.getService(this.platform.Service.Outlet) || this.accessory.addService(this.platform.Service.Outlet);
+            this.platform.log.info('Setting Name: ', component.displayName);
             outlet.setCharacteristic(this.platform.Characteristic.Name, component.displayName);
           } else if (this.accessory.context.device.deviceType === SwidgetDeviceType.Switch) {
             const light = this.accessory.getService(this.platform.Service.Lightbulb) || 
