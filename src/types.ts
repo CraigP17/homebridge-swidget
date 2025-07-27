@@ -11,9 +11,9 @@ export interface SwidgetComponent {
     functions: string[],
     siteId: string,
     deviceId: string,
+    deviceType: SwidgetDeviceType,
     hostId: string,
     hostType: string,
-    deviceType: SwidgetDeviceType,
     room: string
 }
 
