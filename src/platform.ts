@@ -3,7 +3,7 @@ import type { API, Characteristic, DynamicPlatformPlugin, Logging, PlatformAcces
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 import { SwidgetPlatformAccessory } from './platformAccessory.js';
 import { SwidgetApiClient } from './api.js';
-import { SwidgetDevice } from './types.js';
+import { SwidgetComponent } from './types.js';
 
 // This is only required when using Custom Services and Characteristics not support by HomeKit
 import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
@@ -82,15 +82,14 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
 
     try {
     
-      const swidgetDevicess: SwidgetDevice[] = await this.swidgetApi?.getDevices() ?? [];
-      for (const device of swidgetDevicess) {
+      const swidgetComponent: SwidgetComponent[] = await this.swidgetApi?.getComponent() ?? [];
+      for (const component of swidgetComponent) {
         this.log.debug('=============');
-        this.log.debug(device.name);
-        this.log.debug(device.hostId);
-        this.log.debug(device.hostType);
-        this.log.debug(device.components.toString());
+        this.log.debug(component.name);
+        this.log.debug(component.hostId);
+        this.log.debug(component.hostType);
 
-        const id = `${device.hostId}${device.siteId}`;
+        const id = `${component.componentId}${component.hostId}${component.siteId}`;
         const uuid = this.api.hap.uuid.generate(id);
 
         const existingAccessory = this.accessories.get(uuid);
@@ -100,14 +99,14 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
           new SwidgetPlatformAccessory(this, existingAccessory);
         } else {
           // the accessory does not yet exist, so we need to create it
-          this.log.info('Adding new accessory:', device.name);
+          this.log.info('Adding new accessory:', component.displayName);
     
           // create a new accessory
-          const accessory = new this.api.platformAccessory(device.name, uuid);
+          const accessory = new this.api.platformAccessory(component.displayName, uuid);
     
           // store a copy of the device object in the `accessory.context`
           // the `context` property can be used to store any data about the accessory you may need
-          accessory.context.device = device;
+          accessory.context.device = component;
     
           // create the accessory handler for the newly create accessory
           // this is imported from `platformAccessory.ts`
