@@ -92,15 +92,13 @@ export class SwidgetPlatformAccessory {
    * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
   async getOn(): Promise<CharacteristicValue> {
-
     if (this.platform.swidgetApi) {
-      await this.platform.swidgetApi.getStatus(this.device.siteId, this.device.deviceId, this.device.componentId);
+      return await this.platform.swidgetApi.getStatus(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
+    return false;
 
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-
-    return false;
   }
 
   /**

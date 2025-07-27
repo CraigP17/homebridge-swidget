@@ -114,8 +114,7 @@ export class SwidgetApiClient {
         },
         timeout: 30000,
       });
-      this.log.debug(response.statusText);
-      this.log.debug(response.data);
+      this.log.debug(`${deviceId}__${componentId}: ${response.data}`);
   
       // Check if response
       if (!response || !response.data) {
