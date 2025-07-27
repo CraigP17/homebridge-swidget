@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { Logging } from 'homebridge';
 import type { SwidgetHomebridgePlatform } from './platform.js';
-import { SwidgetDeviceType, SwidgetDevice } from './types.js';
+import { SwidgetDeviceType, SwidgetComponent } from './types.js';
 
 
 interface SitesResponse {
@@ -31,7 +31,7 @@ export class SwidgetApiClient {
     this.bearerToken = platform.config.bearerToken;
   }
   
-  async getDevices(): Promise<SwidgetDevice[]> {
+  async getComponents(): Promise<SwidgetComponent[]> {
     try {
       if (!this.bearerToken) {
         throw new Error('No Bearer Token found. Please update plugin config');

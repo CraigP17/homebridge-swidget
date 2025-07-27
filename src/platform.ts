@@ -82,7 +82,7 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
 
     try {
     
-      const swidgetComponent: SwidgetComponent[] = await this.swidgetApi?.getComponent() ?? [];
+      const swidgetComponent: SwidgetComponent[] = await this.swidgetApi?.getComponents() ?? [];
       for (const component of swidgetComponent) {
         this.log.debug('=============');
         this.log.debug(component.name);
