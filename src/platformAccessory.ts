@@ -1,7 +1,7 @@
-import type { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
+import type { CharacteristicValue, PlatformAccessory } from 'homebridge';
 
 import type { SwidgetHomebridgePlatform } from './platform.js';
-import { SwidgetDeviceType } from './types.js';
+import { SwidgetComponent, SwidgetDeviceType } from './types.js';
 
 /**
  * Platform Accessory
@@ -10,58 +10,56 @@ import { SwidgetDeviceType } from './types.js';
  */
 export class SwidgetPlatformAccessory {
 
+  private readonly device: SwidgetComponent;
+
   constructor(
     private readonly platform: SwidgetHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
   ) {
+    this.device = accessory.context.device;
+
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Swidget')
-      .setCharacteristic(this.platform.Characteristic.Model, accessory.context.device.hostType)
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, accessory.context.device.hostId);
+      .setCharacteristic(this.platform.Characteristic.Model, this.device.hostType)
+      .setCharacteristic(this.platform.Characteristic.SerialNumber, this.device.hostId);
 
-    for (const component of this.accessory.context.device.components) {
-      this.platform.log.info('ID: ', component.id);
-      this.platform.log.info('Name: ', component.displayName);
-      this.platform.log.info('Functions: ', component.functions);
-      this.platform.log.info('Type: ', this.accessory.context.device.deviceType); 
+    const uniqueId = `${this.device.componentId} ${this.device.displayName}`;
       
-      const uniqueId = `${component.id} ${component.displayName}`;
-      
-      for (const func of component.functions) {
-        switch (func) {
-        case 'toggle':
-          this.platform.log.info('Device Type IF: ', this.accessory.context.device.deviceType);
-          if (this.accessory.context.device.deviceType === SwidgetDeviceType.Outlet) {
-            const outlet = this.accessory.getService(uniqueId) || 
-              this.accessory.addService(this.platform.Service.Outlet, component.displayName, uniqueId);
-            outlet.setCharacteristic(this.platform.Characteristic.Name, component.displayName);
-          } else if (this.accessory.context.device.deviceType === SwidgetDeviceType.Switch) {
-            const light = this.accessory.getService(uniqueId) || 
-              this.accessory.addService(this.platform.Service.Lightbulb, component.displayName, uniqueId);
-            light.setCharacteristic(this.platform.Characteristic.Name, component.displayName);
+    for (const func of this.device.functions) {
+      switch (func) {
+      case 'toggle':
+        this.platform.log.info('Device Type IF: ', this.device.deviceType);
+        if (this.device.deviceType === SwidgetDeviceType.Outlet) {
+          const outlet = this.accessory.getService(uniqueId) || 
+              this.accessory.addService(this.platform.Service.Outlet, this.device.displayName, uniqueId);
+          outlet.setCharacteristic(this.platform.Characteristic.Name, this.device.displayName);
+        } else if (this.device.deviceType === SwidgetDeviceType.Switch) {
+          const light = this.accessory.getService(uniqueId) || 
+              this.accessory.addService(this.platform.Service.Lightbulb, this.device.displayName, uniqueId);
+          light.setCharacteristic(this.platform.Characteristic.Name, this.device.displayName);
 
-            // Register handlers for the On/Off Characteristic
-            light.getCharacteristic(this.platform.Characteristic.On)
-              .onSet(this.setOn.bind(this))
-              .onGet(this.getOn.bind(this));
+          // Register handlers for the On/Off Characteristic
+          light.getCharacteristic(this.platform.Characteristic.On)
+            .onSet(this.setOn.bind(this))
+            .onGet(this.getOn.bind(this));
 
-            if ('level' in component.functions) {
-              // Handle level with the toggle with the assumption that toggle always included for dimmer lights
-              // Register handlers for the Brightness Characteristic
-              light.getCharacteristic(this.platform.Characteristic.Brightness)
-                .onSet(this.setBrightness.bind(this));
+          if ('level' in this.device.functions) {
+            // Handle level with the toggle with the assumption that toggle always included for dimmer lights
+            // Register handlers for the Brightness Characteristic
+            light.getCharacteristic(this.platform.Characteristic.Brightness)
+              .onSet(this.setBrightness.bind(this));
 
-            }
           }
-          break;
-        
-        default:
-          // Unsupported function, skip creating Characteristic
-          break;
         }
+        break;
         
+      default:
+        // Unsupported function, skip creating Characteristic
+        break;
       }
+        
+      
       
     }
   }
@@ -96,7 +94,7 @@ export class SwidgetPlatformAccessory {
   async getOn(): Promise<CharacteristicValue> {
 
     if (this.platform.swidgetApi) {
-      this.platform.log.debug('TODO: API getOn');
+      await this.platform.swidgetApi.getStatus(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
 
     // if you need to return an error to show the device as "Not Responding" in the Home app:

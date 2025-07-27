@@ -5,10 +5,16 @@ export enum SwidgetDeviceType {
 }
 
 export interface SwidgetComponent {
-    id: string;
-    name: string;
-    displayName: string;
-    functions: string[]
+    componentId: string,
+    name: string,
+    displayName: string,
+    functions: string[],
+    siteId: string,
+    deviceId: string,
+    hostId: string,
+    hostType: string,
+    deviceType: SwidgetDeviceType,
+    room: string
 }
 
 export interface SwidgetDevice {
