@@ -1,4 +1,4 @@
-import type { CharacteristicValue, PlatformAccessory } from 'homebridge';
+import type { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
 
 import type { SwidgetHomebridgePlatform } from './platform.js';
 import { SwidgetComponent, SwidgetDeviceType } from './types.js';
@@ -11,6 +11,7 @@ import { SwidgetComponent, SwidgetDeviceType } from './types.js';
 export class SwidgetPlatformAccessory {
 
   private readonly device: SwidgetComponent;
+  private readonly service?: Service;
 
   constructor(
     private readonly platform: SwidgetHomebridgePlatform,
@@ -29,25 +30,23 @@ export class SwidgetPlatformAccessory {
     for (const func of this.device.functions) {
       switch (func) {
       case 'toggle':
-        this.platform.log.info('Device Type IF: ', this.device.deviceType);
         if (this.device.deviceType === SwidgetDeviceType.Outlet) {
-          const outlet = this.accessory.getService(uniqueId) || 
+          this.service = this.accessory.getService(uniqueId) || 
               this.accessory.addService(this.platform.Service.Outlet, this.device.displayName, uniqueId);
-          outlet.setCharacteristic(this.platform.Characteristic.Name, this.device.displayName);
+
         } else if (this.device.deviceType === SwidgetDeviceType.Switch) {
-          const light = this.accessory.getService(uniqueId) || 
+          this.service = this.accessory.getService(uniqueId) || 
               this.accessory.addService(this.platform.Service.Lightbulb, this.device.displayName, uniqueId);
-          light.setCharacteristic(this.platform.Characteristic.Name, this.device.displayName);
 
           // Register handlers for the On/Off Characteristic
-          light.getCharacteristic(this.platform.Characteristic.On)
+          this.service.getCharacteristic(this.platform.Characteristic.On)
             .onSet(this.setOn.bind(this))
             .onGet(this.getOn.bind(this));
 
           if ('level' in this.device.functions) {
             // Handle level with the toggle with the assumption that toggle always included for dimmer lights
             // Register handlers for the Brightness Characteristic
-            light.getCharacteristic(this.platform.Characteristic.Brightness)
+            this.service.getCharacteristic(this.platform.Characteristic.Brightness)
               .onSet(this.setBrightness.bind(this));
 
           }
@@ -58,9 +57,8 @@ export class SwidgetPlatformAccessory {
         // Unsupported function, skip creating Characteristic
         break;
       }
-        
       
-      
+      this.service?.setCharacteristic(this.platform.Characteristic.Name, this.device.displayName);
     }
   }
 
@@ -69,11 +67,8 @@ export class SwidgetPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
   async setOn(value: CharacteristicValue) {
-    if (this.platform.swidgetApi) {
-      this.platform.log.debug('TODO: API setOn', value);
-    }
-
-    this.platform.log.debug('Set Characteristic On ->', value);
+    const swidgetValue: string = value ? 'on' : 'off';
+    await this.platform.swidgetApi?.toggle(this.device.siteId, this.device.deviceId, this.device.componentId, swidgetValue);
   }
 
   /**
