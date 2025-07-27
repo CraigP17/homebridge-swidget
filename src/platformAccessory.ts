@@ -47,8 +47,8 @@ export class SwidgetPlatformAccessory {
             // Handle level with the toggle with the assumption that toggle always included for dimmer lights
             // Register handlers for the Brightness Characteristic
             this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-              .onSet(this.setBrightness.bind(this));
-
+              .onSet(this.setBrightness.bind(this))
+              .onGet(this.getBrightness.bind(this));
           }
         }
         break;
@@ -102,5 +102,15 @@ export class SwidgetPlatformAccessory {
    */
   async setBrightness(value: CharacteristicValue) {
     await this.platform.swidgetApi?.setBrightness(this.device.siteId, this.device.deviceId, this.device.componentId, Number(value));
+  }
+
+  async getBrightness(): Promise<CharacteristicValue> {
+    if (this.platform.swidgetApi) {
+      return await this.platform.swidgetApi.getBrightness(this.device.siteId, this.device.deviceId, this.device.componentId);
+    }
+    return 0;
+
+    // if you need to return an error to show the device as "Not Responding" in the Home app:
+    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
   }
 }

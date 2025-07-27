@@ -165,6 +165,37 @@ export class SwidgetApiClient {
 
   }
 
+  async getBrightness(siteId: string, deviceId: string, componentId: string): Promise<number> {
+    try {
+      if (!this.bearerToken) {
+        throw new Error('No Bearer Token found. Please update plugin config');
+      }
+
+      const response = await axios({
+        url: `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`,
+        method: 'get',
+        headers: {
+          'Authorization': this.bearerToken,
+        },
+        timeout: 30000,
+      });
+  
+      // Check if response
+      if (!response || !response.data) {
+        this.log.warn('No status returned from API');
+        return 0;
+      }
+      return response.data[componentId].level;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.log.error(`Error: ${error.message}`);
+      } else {
+        this.log.error(`Unexpected error: ${JSON.stringify(error)}`);
+      }
+      return 0;
+    }
+  }
+
   async setBrightness(siteId: string, deviceId: string, componentId: string, value: number) {
     try {
       if (!this.bearerToken) {
