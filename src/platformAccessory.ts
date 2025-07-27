@@ -101,11 +101,6 @@ export class SwidgetPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, changing the Brightness
    */
   async setBrightness(value: CharacteristicValue) {
-
-    if (this.platform.swidgetApi) {
-      this.platform.log.debug('TODO: API setBrightness', value);
-    }
-
-    this.platform.log.debug('Set Characteristic Brightness -> ', value);
+    await this.platform.swidgetApi?.setBrightness(this.device.siteId, this.device.deviceId, this.device.componentId, Number(value));
   }
 }
