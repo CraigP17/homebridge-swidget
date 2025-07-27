@@ -43,7 +43,7 @@ export class SwidgetPlatformAccessory {
             .onSet(this.setOn.bind(this))
             .onGet(this.getOn.bind(this));
 
-          if ('level' in this.device.functions) {
+          if (this.device.functions.includes('level')) {
             // Handle level with the toggle with the assumption that toggle always included for dimmer lights
             // Register handlers for the Brightness Characteristic
             this.service.getCharacteristic(this.platform.Characteristic.Brightness)
