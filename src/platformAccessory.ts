@@ -61,6 +61,16 @@ export class SwidgetPlatformAccessory {
         this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
           .onGet(this.getTemperature.bind(this));
         break; 
+
+      case 'humidity':
+        // create a new Temperature Sensor service
+        this.service = this.accessory.getService(uniqueId) || 
+                this.accessory.addService(this.platform.Service.HumiditySensor, this.device.displayName, uniqueId);
+  
+        // create handlers for required characteristics
+        this.service.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
+          .onGet(this.getHumidity.bind(this));
+        break; 
         
       default:
         // Unsupported function, skip creating Characteristic
@@ -128,8 +138,12 @@ export class SwidgetPlatformAccessory {
       return await this.platform.swidgetApi.getTemperature(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
     return 0;
+  }
 
-    // if you need to return an error to show the device as "Not Responding" in the Home app:
-    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+  async getHumidity(): Promise<CharacteristicValue> {
+    if (this.platform.swidgetApi) {
+      return await this.platform.swidgetApi.getHumidity(this.device.siteId, this.device.deviceId, this.device.componentId);
+    }
+    return 0;
   }
 }
