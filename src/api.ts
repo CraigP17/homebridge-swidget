@@ -122,7 +122,8 @@ export class SwidgetApiClient {
         this.log.warn('No status returned from API');
         return false;
       }
-      return true;
+      this.log.debug(response.data[componentId]);
+      return (response.data[componentId].toggle === 'on') ? true : false;
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.log.error(`Error: ${error.message}`);
