@@ -52,6 +52,15 @@ export class SwidgetPlatformAccessory {
           }
         }
         break;
+      case 'temperature':
+        // create a new Temperature Sensor service
+        this.service = this.accessory.getService(uniqueId) || 
+              this.accessory.addService(this.platform.Service.TemperatureSensor, this.device.displayName, uniqueId);
+
+        // create handlers for required characteristics
+        this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+          .onGet(this.getTemperature.bind(this));
+        break; 
         
       default:
         // Unsupported function, skip creating Characteristic
@@ -107,6 +116,16 @@ export class SwidgetPlatformAccessory {
   async getBrightness(): Promise<CharacteristicValue> {
     if (this.platform.swidgetApi) {
       return await this.platform.swidgetApi.getBrightness(this.device.siteId, this.device.deviceId, this.device.componentId);
+    }
+    return 0;
+
+    // if you need to return an error to show the device as "Not Responding" in the Home app:
+    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+  }
+
+  async getTemperature(): Promise<CharacteristicValue> {
+    if (this.platform.swidgetApi) {
+      return await this.platform.swidgetApi.getTemperature(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
     return 0;
 
