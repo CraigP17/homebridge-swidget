@@ -5,8 +5,6 @@ import { SwidgetPlatformAccessory } from './platformAccessory.js';
 import { SwidgetApiClient } from './api.js';
 import { SwidgetComponent } from './types.js';
 
-// This is only required when using Custom Services and Characteristics not support by HomeKit
-import { EveHomeKitTypes } from 'homebridge-lib/EveHomeKitTypes';
 
 /**
  * HomebridgePlatform
@@ -21,12 +19,6 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
   public readonly accessories: Map<string, PlatformAccessory> = new Map();
   public readonly discoveredCacheUUIDs: string[] = [];
 
-  // This is only required when using Custom Services and Characteristics not support by HomeKit
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public readonly CustomServices: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public readonly CustomCharacteristics: any;
-
   public swidgetApi?: SwidgetApiClient;
 
   constructor(
@@ -36,10 +28,6 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
   ) {
     this.Service = api.hap.Service;
     this.Characteristic = api.hap.Characteristic;
-
-    // This is only required when using Custom Services and Characteristics not support by HomeKit
-    this.CustomServices = new EveHomeKitTypes(this.api).Services;
-    this.CustomCharacteristics = new EveHomeKitTypes(this.api).Characteristics;
 
     if (!config.bearerToken || !config.refreshToken) {
       this.log.error(`Missing Swidget Bearer Token. 
@@ -59,7 +47,7 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
       // run the method to discover / register your devices as accessories
       this.discoverDevices();
     });
-    
+
   }
 
   /**
@@ -74,45 +62,37 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
   }
 
   /**
-   * This is an example method showing how to register discovered accessories.
-   * Accessories must only be registered once, previously created accessories
-   * must not be registered again to prevent "duplicate UUID" errors.
+   * Get all Swidget devices and register them with homebridge
+   * Will only register newly discovered devices, otherwise will restore device
    */
   async discoverDevices() {
 
     try {
-    
+
       const swidgetComponent: SwidgetComponent[] = await this.swidgetApi?.getComponents() ?? [];
       for (const component of swidgetComponent) {
-        this.log.debug('=============');
-        this.log.debug(component.name);
-        this.log.debug(component.hostId);
-        this.log.debug(component.hostType);
+        this.log.debug(`Adding ${component.name}, ${component.deviceType}, ${component.hostType}`);
 
         const id = `${component.componentId}${component.hostId}${component.siteId}`;
         const uuid = this.api.hap.uuid.generate(id);
 
         const existingAccessory = this.accessories.get(uuid);
         if (existingAccessory) {
-          // the accessory already exists
+          // Accessory already exists
           this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
           new SwidgetPlatformAccessory(this, existingAccessory);
         } else {
-          // the accessory does not yet exist, so we need to create it
+          // Accessory does not yet exist, so we need to create it
           this.log.info('Adding new accessory:', component.displayName);
-    
-          // create a new accessory
           const accessory = new this.api.platformAccessory(component.displayName, uuid);
-    
-          // store a copy of the device object in the `accessory.context`
-          // the `context` property can be used to store any data about the accessory you may need
+
+          // Store data about the accessory which are then used in PlatformAccessory
           accessory.context.device = component;
-    
-          // create the accessory handler for the newly create accessory
-          // this is imported from `platformAccessory.ts`
+
+          // Create the accessory handler for the newly create accessory
           new SwidgetPlatformAccessory(this, accessory);
-    
-          // link the accessory to your platform
+
+          // Link the accessory to your platform
           this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
         }
         this.discoveredCacheUUIDs.push(uuid);
@@ -121,9 +101,7 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
       this.log.error('Error Retrieving Devices');
     }
 
-    // you can also deal with accessories from the cache which are no longer present by removing them from Homebridge
-    // for example, if your plugin logs into a cloud account to retrieve a device list, and a user has previously removed a device
-    // from this cloud account, then this device will no longer be present in the device list but will still be in the Homebridge cache
+    // Removes existing accessories that are no longer present from API call
     for (const [uuid, accessory] of this.accessories) {
       if (!this.discoveredCacheUUIDs.includes(uuid)) {
         this.log.info('Removing existing accessory from cache:', accessory.displayName);

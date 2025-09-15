@@ -26,16 +26,16 @@ export class SwidgetPlatformAccessory {
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.device.hostId);
 
     const uniqueId = `${this.device.componentId} ${this.device.displayName}`;
-      
+
     for (const func of this.device.functions) {
       switch (func) {
       case 'toggle':
         if (this.device.deviceType === SwidgetDeviceType.Outlet) {
-          this.service = this.accessory.getService(uniqueId) || 
+          this.service = this.accessory.getService(uniqueId) ||
               this.accessory.addService(this.platform.Service.Outlet, this.device.displayName, uniqueId);
 
         } else if (this.device.deviceType === SwidgetDeviceType.Switch) {
-          this.service = this.accessory.getService(uniqueId) || 
+          this.service = this.accessory.getService(uniqueId) ||
               this.accessory.addService(this.platform.Service.Lightbulb, this.device.displayName, uniqueId);
 
           // Register handlers for the On/Off Characteristic
@@ -54,29 +54,29 @@ export class SwidgetPlatformAccessory {
         break;
       case 'temperature':
         // create a new Temperature Sensor service
-        this.service = this.accessory.getService(uniqueId) || 
-              this.accessory.addService(this.platform.Service.TemperatureSensor, this.device.displayName, uniqueId);
+        this.service = this.accessory.getService(uniqueId) ||
+            this.accessory.addService(this.platform.Service.TemperatureSensor, this.device.displayName, uniqueId);
 
         // create handlers for required characteristics
         this.service.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
           .onGet(this.getTemperature.bind(this));
-        break; 
+        break;
 
       case 'humidity':
         // create a new Temperature Sensor service
-        this.service = this.accessory.getService(uniqueId) || 
-                this.accessory.addService(this.platform.Service.HumiditySensor, this.device.displayName, uniqueId);
-  
+        this.service = this.accessory.getService(uniqueId) ||
+            this.accessory.addService(this.platform.Service.HumiditySensor, this.device.displayName, uniqueId);
+
         // create handlers for required characteristics
         this.service.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
           .onGet(this.getHumidity.bind(this));
-        break; 
-        
+        break;
+
       default:
         // Unsupported function, skip creating Characteristic
         break;
       }
-      
+
       this.service?.setCharacteristic(this.platform.Characteristic.Name, this.device.displayName);
     }
   }
@@ -93,26 +93,12 @@ export class SwidgetPlatformAccessory {
   /**
    * Handle the "GET" requests from HomeKit
    * These are sent when HomeKit wants to know the current state of the accessory, for example, checking if a Light bulb is on.
-   *
-   * GET requests should return as fast as possible. A long delay here will result in
-   * HomeKit being unresponsive and a bad user experience in general.
-   *
-   * If your device takes time to respond you should update the status of your device
-   * asynchronously instead using the `updateCharacteristic` method instead.
-   * In this case, you may decide not to implement `onGet` handlers, which may speed up
-   * the responsiveness of your device in the Home app.
-
-   * @example
-   * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
    */
   async getOn(): Promise<CharacteristicValue> {
     if (this.platform.swidgetApi) {
       return await this.platform.swidgetApi.getOnStatus(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
-    return false;
-
-    // if you need to return an error to show the device as "Not Responding" in the Home app:
-    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
   }
 
   /**
@@ -127,23 +113,20 @@ export class SwidgetPlatformAccessory {
     if (this.platform.swidgetApi) {
       return await this.platform.swidgetApi.getBrightness(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
-    return 0;
-
-    // if you need to return an error to show the device as "Not Responding" in the Home app:
-    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
   }
 
   async getTemperature(): Promise<CharacteristicValue> {
     if (this.platform.swidgetApi) {
       return await this.platform.swidgetApi.getTemperature(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
-    return 0;
+    throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
   }
 
   async getHumidity(): Promise<CharacteristicValue> {
     if (this.platform.swidgetApi) {
       return await this.platform.swidgetApi.getHumidity(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
-    return 0;
+    throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
   }
 }
