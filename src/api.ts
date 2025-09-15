@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import type { Logging } from 'homebridge';
 import type { SwidgetHomebridgePlatform } from './platform.js';
 import { SwidgetDeviceType, SwidgetComponent } from './types.js';
@@ -19,6 +19,30 @@ interface SitesResponse {
             name?: string;
       }[];
     }[];
+}
+
+interface OnStatusResponse {
+    [componentId: string]: {
+        toggle: string;
+    };
+}
+
+interface BrightnessResponse {
+    [componentId: string]: {
+        level: number;
+    };
+}
+
+interface TemperatureResponse {
+    [componentId: string]: {
+        temperature: number;
+    };
+}
+
+interface HumidityResponse {
+    [componentId: string]: {
+        humidity: number;
+    };
 }
 
 export class SwidgetApiClient {
@@ -70,6 +94,46 @@ export class SwidgetApiClient {
       return 1;
     }
   }
+
+  async axiosRequestWrapper<T>(
+    url: string,
+    method: 'get' | 'post',
+    data = {},
+    retried = false
+  ): Promise<T> {
+
+    if (!this.bearerToken) {
+        throw new Error('No bearer token available');
+    }
+    // If we receive 401 error from API, get new bearer token and retry request
+    try {
+        const config: AxiosRequestConfig = {
+            url: url,
+            method: method,
+            headers: {
+              'Authorization': this.bearerToken,
+            },
+            timeout: 10000,
+        };
+        if (data && method === 'post') {
+          config.data = data;
+        }
+      const response = await axios(config);
+
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401 && !retried) {
+          const refreshResult = await this.getNewBearerToken();
+          if (refreshResult === 0) {
+            return this.axiosRequestWrapper<T>(url, method, data, true);
+          }
+        }
+      }
+      // Let original api caller handle additional errors
+      throw error;
+    }
+  }
   
   async getComponents(): Promise<SwidgetComponent[]> {
     this.log.info("[API] getComponents()");
@@ -78,50 +142,22 @@ export class SwidgetApiClient {
         throw new Error('No Bearer Token found. Please update plugin config');
       }
       // Use the token received to get a device list
-      const response = await axios({
-        url: 'https://api.swidget.com/api/v1/sites',
-        method: 'get',
-        headers: {
-          'Authorization': this.bearerToken,
-        },
-        timeout: 30000,
-      });
-    //   this.log.debug(response.statusText);
-    //   this.log.debug(response.data);
-
+      const data = await this.axiosRequestWrapper<SitesResponse[]>(
+        'https://api.swidget.com/api/v1/sites', 
+        'get'
+      );
+      
       // Check if response
-      if (response?.status === 401) {
-        await this.getNewBearerToken();
-        return await this.getComponents();
-      }
-      else if (!response || !response.data) {
+      if (!data) {
         this.log.warn('No devices returned from API');
         return [];
       }
-      //   return response.data.flatMap((site: SitesResponse) =>
-      //     site.devices.map(device => ({
-      //       siteId: site.siteId,
-      //       hostId: device.hostId,
-      //       hostType: device.hostType,
-      //       deviceType: device.hostType === 'host.outlet' ? SwidgetDeviceType.Outlet : SwidgetDeviceType.Switch,
-      //       isConnected: device.isConnected,
-      //       room: device.room,
-      //       deviceId: device.deviceId,
-      //       components: device.components.map(component => ({
-      //         id: component.id,
-      //         name: component.name ?? component.id,
-      //         displayName: `${component.name ?? component.id} (${device.room})`,
-      //         functions: component.functions ?? [],
-      //       })),
-      //       name: `${device.room} ${device.hostType === 'host.outlet' ? 'Outlet' : 'Switch'}`,
-      //     })),
-      //   );
 
-      return response.data.flatMap((site: SitesResponse) =>
+      return data.flatMap((site: SitesResponse) =>
         site.devices.flatMap(device =>
           device.components
             .filter(component => component.functions)
-            .map(component => ({
+            .map(component => (<SwidgetComponent>{
               componentId: component.id,
               name: component.name ?? component.id,
               displayName: `${component.name ?? component.id} (${device.room})`,
@@ -136,7 +172,7 @@ export class SwidgetApiClient {
         ),
       );
     } catch (error: unknown) {
-      if (error instanceof Error) {
+    if (error instanceof Error) {
         this.log.error(`Error: ${error.message}`);
       } else {
         this.log.error(`Unexpected error: ${JSON.stringify(error)}`);
@@ -145,33 +181,24 @@ export class SwidgetApiClient {
     }
   }
   
-  async getStatus(siteId: string, deviceId: string, componentId: string): Promise<boolean> {
+  async getOnStatus(siteId: string, deviceId: string, componentId: string): Promise<boolean> {
     try {
       if (!this.bearerToken) {
         throw new Error('No Bearer Token found. Please update plugin config');
       }
 
-      const response = await axios({
-        url: `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`,
-        method: 'get',
-        headers: {
-          'Authorization': this.bearerToken,
-        },
-        timeout: 30000,
-      });
-      this.log.debug(`${deviceId}__${componentId}: ${response.data}`);
+      const data = await this.axiosRequestWrapper<OnStatusResponse>(
+        `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`, 
+        'get'
+      );
   
       // Check if response
-      if (response?.status === 401) {
-        await this.getNewBearerToken();
-        return await this.getStatus(siteId, deviceId, componentId);
-      }
-      else if (!response || !response.data) {
+      if (!data) {
         this.log.warn('No status returned from API');
         return false;
       }
-      this.log.debug(response.data[componentId]);
-      return (response.data[componentId].toggle === 'on') ? true : false;
+
+      return (data[componentId]?.toggle === 'on') ? true : false;
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.log.error(`Error: ${error.message}`);
@@ -187,25 +214,16 @@ export class SwidgetApiClient {
       if (!this.bearerToken) {
         throw new Error('No Bearer Token found. Please update plugin config');
       }
-  
-      const response = await axios({
-        url: `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}/toggle`,
-        method: 'post',
-        headers: {
-          'Authorization': this.bearerToken,
-        },
-        data: { 'set': value },
-        timeout: 30000,
-      });
-      this.log.debug(`${deviceId}__${componentId}: ${response.data}`);
+
+      const data = await this.axiosRequestWrapper(
+        `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}/toggle`, 
+        'post',
+        { 'set': value }
+      );
     
       // Check if response
-      if (response?.status === 401) {
-        await this.getNewBearerToken();
-        await this.toggle(siteId, deviceId, componentId, value);
-      }
-      else if (!response || !response.data) {
-        this.log.warn('No status returned from API');
+      if (!data) {
+        this.log.warn('Unable to toggle device');
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -224,25 +242,17 @@ export class SwidgetApiClient {
         throw new Error('No Bearer Token found. Please update plugin config');
       }
 
-      const response = await axios({
-        url: `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`,
-        method: 'get',
-        headers: {
-          'Authorization': this.bearerToken,
-        },
-        timeout: 30000,
-      });
+      const data = await this.axiosRequestWrapper<BrightnessResponse>(
+        `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`, 
+        'get'
+      );
   
       // Check if response
-      if (response?.status === 401) {
-        await this.getNewBearerToken();
-        return await this.getBrightness(siteId, deviceId, componentId);
-      }
-      else if (!response || !response.data) {
+      if (!data) {
         this.log.warn('No status returned from API');
         return 0;
       }
-      return response.data[componentId].level;
+      return data[componentId].level;
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.log.error(`Error: ${error.message}`);
@@ -259,23 +269,14 @@ export class SwidgetApiClient {
         throw new Error('No Bearer Token found. Please update plugin config');
       }
     
-      const response = await axios({
-        url: `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}/level`,
-        method: 'post',
-        headers: {
-          'Authorization': this.bearerToken,
-        },
-        data: { 'set': value },
-        timeout: 30000,
-      });
-      this.log.debug(`${deviceId}__${componentId}: ${response.data}`);
-      
+      const data = await this.axiosRequestWrapper(
+        `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}/level`, 
+        'post',
+        { 'set': value }
+      );
+ 
       // Check if response
-      if (response?.status === 401) {
-        await this.getNewBearerToken();
-        await this.setBrightness(siteId, deviceId, componentId, value);
-      }
-      else if (!response || !response.data) {
+      if (!data) {
         this.log.warn('No status returned from API');
       }
     } catch (error: unknown) {
@@ -294,25 +295,17 @@ export class SwidgetApiClient {
         throw new Error('No Bearer Token found. Please update plugin config');
       }
 
-      const response = await axios({
-        url: `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`,
-        method: 'get',
-        headers: {
-          'Authorization': this.bearerToken,
-        },
-        timeout: 30000,
-      });
+      const data = await this.axiosRequestWrapper<TemperatureResponse>(
+        `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`, 
+        'get'
+      );
   
       // Check if response
-      if (response?.status === 401) {
-        await this.getNewBearerToken();
-        return await this.getTemperature(siteId, deviceId, componentId);
-      }
-      else if (!response || !response.data) {
-        this.log.warn('No status returned from API');
+      if (!data) {
+        this.log.warn('No temperature returned from API');
         return 0;
       }
-      return response.data[componentId].temperature;
+      return data[componentId].temperature;
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.log.error(`Error: ${error.message}`);
@@ -329,25 +322,17 @@ export class SwidgetApiClient {
         throw new Error('No Bearer Token found. Please update plugin config');
       }
 
-      const response = await axios({
-        url: `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`,
-        method: 'get',
-        headers: {
-          'Authorization': this.bearerToken,
-        },
-        timeout: 30000,
-      });
+      const data = await this.axiosRequestWrapper<HumidityResponse>(
+        `https://api.swidget.com/api/v1/sites/${siteId}/devices/${deviceId}/${componentId}`, 
+        'get'
+      );
   
       // Check if response
-      if (response?.status === 401) {
-        await this.getNewBearerToken();
-        return await this.getHumidity(siteId, deviceId, componentId);
-      }
-      else if (!response || !response.data) {
+      if (!data) {
         this.log.warn('No status returned from API');
         return 0;
       }
-      return response.data[componentId].humidity;
+      return data[componentId].humidity;
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.log.error(`Error: ${error.message}`);

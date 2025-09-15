@@ -107,7 +107,7 @@ export class SwidgetPlatformAccessory {
    */
   async getOn(): Promise<CharacteristicValue> {
     if (this.platform.swidgetApi) {
-      return await this.platform.swidgetApi.getStatus(this.device.siteId, this.device.deviceId, this.device.componentId);
+      return await this.platform.swidgetApi.getOnStatus(this.device.siteId, this.device.deviceId, this.device.componentId);
     }
     return false;
 
