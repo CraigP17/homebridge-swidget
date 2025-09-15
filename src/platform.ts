@@ -41,7 +41,7 @@ export class SwidgetHomebridgePlatform implements DynamicPlatformPlugin {
     this.CustomServices = new EveHomeKitTypes(this.api).Services;
     this.CustomCharacteristics = new EveHomeKitTypes(this.api).Characteristics;
 
-    if (!config.bearerToken) {
+    if (!config.bearerToken || !config.refreshToken) {
       this.log.error(`Missing Swidget Bearer Token. 
         Token must be provided in the config from <a href="https://oauth.swidget.com/authorization/v2" target="_blank">Swidget Authorization</a>.`);
       return;

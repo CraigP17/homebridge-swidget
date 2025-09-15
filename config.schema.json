@@ -13,6 +13,13 @@
         "required": true,
         "description": "Required to connect with Swidget devices.",
         "default": "Bearer eyJhb..."
+      },
+      "refreshToken": {
+        "type": "string",
+        "title": "Swidget Refresh Token",
+        "required": true,
+        "description": "Required to auto refresh Swidget authorization token.",
+        "default": "..."
       }
     }
   }

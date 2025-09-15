@@ -25,13 +25,54 @@ export class SwidgetApiClient {
 
   public log: Logging;
   public bearerToken: string;
+  public refreshToken: string;
 
   constructor(private platform: SwidgetHomebridgePlatform) {
     this.log = platform.log;
     this.bearerToken = platform.config.bearerToken;
+    this.refreshToken = platform.config.refreshToken;
+  }
+
+  async getNewBearerToken(): Promise<number> {
+    this.log.info("[API] getNewBearerToken()");
+    try {
+      if (!this.bearerToken || !this.refreshToken) {
+        throw new Error('Cannot get new token if none found. Please update config.');
+      }
+
+      const response = await axios.post(
+        'https://oauth.swidget.com/token',
+        {
+            refresh_token: this.refreshToken,
+            grant_type: 'refresh_token'
+        },
+        {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            timeout: 10000
+        }
+      );
+      if (response?.status === 200 && response.data) {
+        this.bearerToken = `Bearer ${response.data.access_token}`;
+        return 0;
+      } else {
+        this.log.error(`Error: Unable to get new bearer token, ${response?.status}`);
+        return 1;
+      }
+
+    } catch (error) {
+      if (error instanceof Error) {
+        this.log.error(`Error: ${error.message}`);
+      } else {
+        this.log.error(`Unexpected error: ${JSON.stringify(error)}`);
+      }
+      return 1;
+    }
   }
   
   async getComponents(): Promise<SwidgetComponent[]> {
+    this.log.info("[API] getComponents()");
     try {
       if (!this.bearerToken) {
         throw new Error('No Bearer Token found. Please update plugin config');
@@ -45,11 +86,15 @@ export class SwidgetApiClient {
         },
         timeout: 30000,
       });
-      this.log.debug(response.statusText);
-      this.log.debug(response.data);
+    //   this.log.debug(response.statusText);
+    //   this.log.debug(response.data);
 
       // Check if response
-      if (!response || !response.data) {
+      if (response?.status === 401) {
+        await this.getNewBearerToken();
+        return await this.getComponents();
+      }
+      else if (!response || !response.data) {
         this.log.warn('No devices returned from API');
         return [];
       }
@@ -117,7 +162,11 @@ export class SwidgetApiClient {
       this.log.debug(`${deviceId}__${componentId}: ${response.data}`);
   
       // Check if response
-      if (!response || !response.data) {
+      if (response?.status === 401) {
+        await this.getNewBearerToken();
+        return await this.getStatus(siteId, deviceId, componentId);
+      }
+      else if (!response || !response.data) {
         this.log.warn('No status returned from API');
         return false;
       }
@@ -151,7 +200,11 @@ export class SwidgetApiClient {
       this.log.debug(`${deviceId}__${componentId}: ${response.data}`);
     
       // Check if response
-      if (!response || !response.data) {
+      if (response?.status === 401) {
+        await this.getNewBearerToken();
+        await this.toggle(siteId, deviceId, componentId, value);
+      }
+      else if (!response || !response.data) {
         this.log.warn('No status returned from API');
       }
     } catch (error: unknown) {
@@ -181,7 +234,11 @@ export class SwidgetApiClient {
       });
   
       // Check if response
-      if (!response || !response.data) {
+      if (response?.status === 401) {
+        await this.getNewBearerToken();
+        return await this.getBrightness(siteId, deviceId, componentId);
+      }
+      else if (!response || !response.data) {
         this.log.warn('No status returned from API');
         return 0;
       }
@@ -214,7 +271,11 @@ export class SwidgetApiClient {
       this.log.debug(`${deviceId}__${componentId}: ${response.data}`);
       
       // Check if response
-      if (!response || !response.data) {
+      if (response?.status === 401) {
+        await this.getNewBearerToken();
+        await this.setBrightness(siteId, deviceId, componentId, value);
+      }
+      else if (!response || !response.data) {
         this.log.warn('No status returned from API');
       }
     } catch (error: unknown) {
@@ -243,7 +304,11 @@ export class SwidgetApiClient {
       });
   
       // Check if response
-      if (!response || !response.data) {
+      if (response?.status === 401) {
+        await this.getNewBearerToken();
+        return await this.getTemperature(siteId, deviceId, componentId);
+      }
+      else if (!response || !response.data) {
         this.log.warn('No status returned from API');
         return 0;
       }
@@ -274,7 +339,11 @@ export class SwidgetApiClient {
       });
   
       // Check if response
-      if (!response || !response.data) {
+      if (response?.status === 401) {
+        await this.getNewBearerToken();
+        return await this.getHumidity(siteId, deviceId, componentId);
+      }
+      else if (!response || !response.data) {
         this.log.warn('No status returned from API');
         return 0;
       }
